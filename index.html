@@ -173,7 +173,10 @@
           "title": "Number Sequenced Over Time",
           "width": 500,
           "height": 300,
-          "mark": "line"
+          "mark": "line",
+          "params": [
+            {"name": "timeSel", "select": {"type": "interval", "encodings": ["x"]}}
+          ]
         },
         {
           "encoding": {
