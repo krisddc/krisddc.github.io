@@ -173,10 +173,7 @@
           "title": "Number Sequenced Over Time",
           "width": 500,
           "height": 300,
-          "mark": "line",
-          "params": [
-            {"name": "timeSel", "select": {"type": "interval", "encodings": ["x"]}}
-          ]
+          "mark": "line"
         },
         {
           "encoding": {
@@ -191,15 +188,16 @@
               "field": "sum_detections_variant",
               "type": "quantitative"
             },
-            "y": {"title": "Variant", "field": "variant"}
+            "y": {"title": "Variant", "field": "variant"},
+            "tooltip": [
+              {"field": "variant", "type": "nominal", "title": "Variant"},
+              {"field": "sum_detections_variant", "type": "quantitative", "title": "Number of Detections"}
+            ]
           },
           "title": "Variant Distribution In Selected Time Range",
           "width": 500,
           "height": 300,
           "mark": "bar",
-          "params": [
-            {"name": "click", "select": {"type": "point", "encodings": ["color"]}}
-          ],
           "transform": [
             {"filter": {
               "param": "countrySel",
