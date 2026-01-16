@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/vega@6.2.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@6.4.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@7.1.0"></script>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    #vis {
+      width: 100%;
+      max-width: 1200px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="vis"></div>
+  <script>
+    const spec = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+      "title": ["SARS-CoV-2 in the EU/EEA from weeks 2020-01 to 2023-47, as reported by the ECDC", ""],
+      "data": {"url": "data/data.csv"},
+      "transform": [
+        {
+          "calculate": "timeParse(datum.year_week + '-1', '%Y-%W-%u')",
+          "as": "week_date"
+        }
+      ],
+      "concat": [
+        {
+          "title": "Total Cases by Country",
+          "width": 400,
+          "height": 400,
+          "data": {
+            "url": "geo/europe.topojson", 
+            "format": {
+              "type": "topojson", 
+              "feature": "europe"
+            }
+          },
+          "transform": [
+            {
+              "lookup": "id",
+              "from": {
+                "data": {"url": "data/data.csv"},
+                "key": "country_code",
+                "fields": ["country", "country_code", "total_cases"]
+              }
+            },
+          ],
+          "mark": {
+            "type": "geoshape",
+            "stroke": "#eeeeee",
+            "strokeWidth": 0.5
+          },
+          "params": [{
+              "name": "countrySel",
+              "select": {
+                "type": "point",
+                "fields": ["country_code"]
+              },
+              "value": [{"country_code": "AT"}]
+          }],
+          "encoding": {
+            "color": {
+                "field": "total_cases",
+                "type": "quantitative",
+                "scale": {"scheme": "blues"},
+                "title": "New Cases"
+            },
+              "tooltip": [
+                {"field": "country", "type": "nominal", "title": "Country"},
+                {"field": "total_cases", "type": "quantitative", "title": "Total Cases", "format": ","},
+                ]
+            }
+        },
+        {
+          "transform": [{
+            "filter": {
+              "param": "countrySel",
+              "empty": false
+            }
+          }],
+          "encoding": {
+            "x": {
+              "field": "week_date",
+              "type": "temporal",
+              "title": "Year-Week",
+              "axis": {
+                "format": "%Y-%W",
+                "tickCount": "quarter",
+                "labelAngle": 45 
+              }
+            },
+            "y": {
+              "title": "New Cases",
+              "field": "new_cases",
+              "type": "quantitative"
+            },
+            "tooltip": [
+              {"field": "country_code", "type": "nominal", "title": "Country"},
+              {"field": "new_cases", "type": "quantitative", "title": "New Cases"},
+              {"field": "year_week", "type": "nominal", "title": "Year-Week"}
+            ]
+          },
+          "title": "New Cases Over Time",
+          "width": 500,
+          "height": 300,
+          "mark": "line",
+          "params": [
+            {"name": "timeSel", "select": {"type": "interval", "encodings": ["x"]}}
+          ]
+        },
+        {
+          "transform": [
+            {
+              "filter": {
+                "param": "countrySel"
+              }
+            },
+            {
+              "aggregate": [
+                {
+                  "op": "max",
+                  "field": "number_sequenced",
+                  "as": "number_sequenced_per_source"
+                }
+              ],
+              "groupby": ["country_code", "country", "year_week", "week_date", "source"]
+            },
+            {
+              "aggregate": [
+                {
+                  "op": "sum",
+                  "field": "number_sequenced_per_source",
+                  "as": "total_number_sequenced"
+                }
+              ],
+              "groupby": ["country_code", "country", "year_week", "week_date"]
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "week_date",
+              "type": "temporal",
+              "title": "Year-Week",
+              "axis": {
+                "format": "%Y-%W",
+                "tickCount": "quarter",
+                "labelAngle": 45 
+              }
+            },
+            "y": {
+              "title": "Number Sequenced",
+              "field": "total_number_sequenced",
+              "type": "quantitative"
+            },
+            "tooltip": [
+              {"field": "country_code", "type": "nominal", "title": "Country"},
+              {"field": "total_number_sequenced", "type": "quantitative", "title": "Number Sequenced"},
+              {"field": "year_week", "type": "nominal", "title": "Year-Week"}
+            ]
+          },
+          "title": "Number Sequenced Over Time",
+          "width": 500,
+          "height": 300,
+          "mark": "line",
+          "params": [
+            {"name": "timeSel", "select": {"type": "interval", "encodings": ["x"]}}
+          ]
+        },
+        {
+          "encoding": {
+            "color": {
+              "field": "variant",
+              "title": "Variant",
+              "type": "nominal",
+              "legend": {"orient": "right"}
+            },
+            "x": {
+              "title": "Number of Detections",
+              "field": "sum_detections_variant",
+              "type": "quantitative"
+            },
+            "y": {"title": "Variant", "field": "variant"}
+          },
+          "title": "Variant Distribution In Selected Time Range",
+          "width": 500,
+          "height": 300,
+          "mark": "bar",
+          "params": [
+            {"name": "click", "select": {"type": "point", "encodings": ["color"]}}
+          ],
+          "transform": [
+            {"filter": {
+              "param": "countrySel"
+            }},
+            {"filter": {"param": "timeSel"}},
+            {"filter": "datum.variant != 'UNK'"},
+            {
+              "aggregate": [
+                {
+                  "op": "sum",
+                  "field": "number_detections_variant",
+                  "as": "sum_detections_variant"
+                }
+              ],
+              "groupby": ["variant"]
+            },
+            {"filter": "datum.sum_detections_variant > 0"}
+          ]
+        }
+      ],
+      "columns": 2,
+      "config": {
+        "view": {"stroke": "transparent"},
+        "title": {
+          "fontSize": 14
+        }
+      }
+    };
+    vegaEmbed("#vis", spec, {mode: "vega-lite"}).then(console.log).catch(console.warn);
+  </script>
+</body>
+</html>
